@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Assistente IA - Lei Rouanet</title>
+
+  <!-- ================= PWA CONFIG ================= -->
+  <meta name="theme-color" content="#1e40af">
+  <meta name="description" content="Assistente especialista em Lei Rouanet">
+  <link rel="manifest" href="./manifest.json">
+
+  <!-- iOS Config -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Rouanet IA">
+  <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgcng9IjEwMCIgZmlsbD0iIzFlNDBhZiIvPjxwYXRoIGQ9Ik0yNTYgMTI4djI1Nk0xMjggMTkyaDI1Nk0xMjggMTkybC00OCA5NmExMTIgMTEyIDAgMCAwIDE5MiAwem0yNTYgMGwtNDggOTZhMTEyIDExMiAwIDAgMCAxOTIgMHoiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+">
+  <!-- =============================================== -->
+
+  <style>
+    /* ---------- Variáveis de Cores (Temas) ---------- */
+    :root {
+      --primary: #1e40af;
+      --primary-hover: #1d4ed8;
+      --primary-light: #3b82f6;
+      --bg: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      --chat-bg: #ffffff;
+      --bot-msg: #f8fafc;
+      --text-dark: #1e293b;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 12px 35px rgba(30, 64, 175, 0.12);
+      --input-bg: #f8fafc;
+      --input-border: #cbd5e1;
+      --header-glass: rgba(255, 255, 255, 0.15);
+      --header-glass-hover: rgba(255, 255, 255, 0.25);
+      --scroll-thumb: #cbd5e1;
+      --scroll-thumb-hover: #94a3b8;
+    }
+
+    [data-theme="dark"] {
+      --primary: #2563eb;
+      --primary-hover: #3b82f6;
+      --primary-light: #60a5fa;
+      --bg: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      --chat-bg: #1e293b;
+      --bot-msg: #334155;
+      --text-dark: #f1f5f9;
+      --text-light: #94a3b8;
+      --border: #334155;
+      --shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+      --input-bg: #0f172a;
+      --input-border: #334155;
+      --header-glass: rgba(0, 0, 0, 0.2);
+      --header-glass-hover: rgba(0, 0, 0, 0.3);
+      --scroll-thumb: #475569;
+      --scroll-thumb-hover: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      height: 100dvh; /* Melhor comportamento em mobile */
+      padding: 16px;
+      transition: background 0.3s ease;
+    }
+
+    .chat-container {
+      width: 100%;
+      max-width: 760px;
+      height: 90vh;
+      height: 90dvh;
+      max-height: 900px;
+      background: var(--chat-bg);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: background 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    /* ---------- Header ---------- */
+    .chat-header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding-top: max(20px, env(safe-area-inset-top)); /* iOS notch */
+      transition: background 0.3s ease;
+    }
+
+    .chat-header-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      backdrop-filter: blur(4px);
+    }
+
+    .avatar svg {
+      width: 24px;
+      height: 24px;
+      color: white;
+    }
+
+    .chat-header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+    }
+
+    .chat-header span {
+      font-size: 0.8rem;
+      opacity: 0.9;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+      font-weight: 400;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: #4ade80;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-reset, .btn-theme {
+      background: var(--header-glass);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-reset:hover, .btn-theme:hover {
+      background: var(--header-glass-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-theme {
+      padding: 8px 10px;
+    }
+
+    .btn-theme svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* ---------- Messages ---------- */
+    .chat-messages {
+      flex: 1;
+      padding: 24px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+      background: var(--chat-bg);
+      transition: background 0.3s ease;
+    }
+
+    .chat-messages::-webkit-scrollbar { width: 6px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: var(--scroll-thumb);
+      border-radius: 10px;
+    }
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+      background: var(--scroll-thumb-hover);
+    }
+
+    .message {
+      max-width: 82%;
+      padding: 14px 18px;
+      border-radius: 18px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      word-wrap: break-word;
+      animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+      color: white;
+      border-bottom-right-radius: 4px;
+      white-space: pre-wrap;
+      box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
+    }
+
+    .message.bot {
+      align-self: flex-start;
+      background: var(--bot-msg);
+      color: var(--text-dark);
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+      transition: background 0.3s ease, border 0.3s ease, color 0.3s ease;
+    }
+
+    .message.bot p { margin-bottom: 12px; }
+    .message.bot p:last-child { margin-bottom: 0; }
+    .message.bot ul { margin: 8px 0 12px 20px; }
+    .message.bot li { margin-bottom: 6px; }
+    .message.bot strong {
+      color: var(--primary-light);
+      font-weight: 600;
+    }
+
+    /* ---------- Typing ---------- */
+    .typing {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      align-self: flex-start;
+      padding: 14px 18px;
+      background: var(--bot-msg);
+      border-radius: 18px;
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--border);
+      margin: 0 20px 8px;
+      transition: background 0.3s ease, border 0.3s ease;
+    }
+
+    .typing.active { display: flex; }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--text-light);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ---------- Input ---------- */
+    .chat-input-area {
+      padding: 16px 20px;
+      padding-bottom: max(16px, env(safe-area-inset-bottom)); /* iOS notch */
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      background: var(--chat-bg);
+      align-items: center;
+      transition: background 0.3s ease, border 0.3s ease;
+    }
+
+    .chat-input-area input {
+      flex: 1;
+      padding: 14px 20px;
+      border: 1px solid var(--input-border);
+      border-radius: 14px;
+      font-size: 16px; /* Evita zoom automático no iOS */
+      outline: none;
+      transition: all 0.2s;
+      background: var(--input-bg);
+      color: var(--text-dark);
+    }
+
+    .chat-input-area input::placeholder { color: var(--text-light); }
+
+    .chat-input-area input:focus {
+      border-color: var(--primary-light);
+      background: var(--chat-bg);
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+    }
+
+    .chat-input-area input:disabled {
+      background: var(--bot-msg);
+      cursor: not-allowed;
+    }
+
+    .chat-input-area button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 10px rgba(30, 64, 175, 0.2);
+    }
+
+    .chat-input-area button:hover:not(:disabled) {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(30, 64, 175, 0.3);
+    }
+
+    .chat-input-area button:active:not(:disabled) { transform: translateY(0); }
+    .chat-input-area button:disabled {
+      background: #cbd5e1;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .chat-input-area button svg {
+      width: 22px;
+      height: 22px;
+      margin-right: 2px;
+    }
+
+    /* ---------- Responsive Mobile ---------- */
+    @media (max-width: 600px) {
+      body { padding: 0; }
+      .chat-container {
+        height: 100dvh;
+        max-height: none;
+        border-radius: 0;
+      }
+      .chat-header { padding: 16px; }
+      .chat-header h1 { font-size: 1rem; }
+      .chat-header span { display: none; }
+      .avatar { width: 40px; height: 40px; }
+      .chat-messages { padding: 16px; }
+      .message { max-width: 90%; padding: 12px 16px; }
+      .chat-input-area { padding: 12px 16px; }
+      .header-actions { gap: 6px; }
+      .btn-reset { font-size: 0.72rem; padding: 6px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="chat-container">
+  <div class="chat-header">
+    <div class="chat-header-info">
+      <div class="avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3v18"></path>
+          <path d="M5 7l7-4 7 4"></path>
+          <path d="M3 10l4-3 4 3"></path>
+          <path d="M13 10l4-3 4 3"></path>
+          <path d="M3 10c0 2.2 1.8 4 4 4s4-1.8 4-4"></path>
+          <path d="M13 10c0 2.2 1.8 4 4 4s4-1.8 4-4"></path>
+          <path d="M8 21h8"></path>
+        </svg>
+      </div>
+      <div>
+        <h1>Assistente IA - Lei Rouanet</h1>
+        <span><span class="status-dot"></span>Tire suas d&uacute;vidas sobre incentivos culturais</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="btn-theme" id="themeToggle" title="Mudar tema" aria-label="Mudar tema">
+        <svg id="icon-theme" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+      </button>
+      <button class="btn-reset" onclick="resetSession()">Nova Conversa</button>
+    </div>
+  </div>
+
+  <div class="chat-messages" id="chatMessages">
+    <div class="message bot"><p>Ol&aacute;! Sou o assistente especialista na <strong>Lei Rouanet</strong>. Como posso ajudar com o seu projeto cultural hoje?</p></div>
+  </div>
+
+  <div class="typing" id="typingIndicator">
+    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+  </div>
+
+  <form class="chat-input-area" id="chatForm">
+    <input type="text" id="userInput" placeholder="Digite sua pergunta..." autocomplete="off" required />
+    <button type="submit" id="sendBtn" aria-label="Enviar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </form>
+</div>
+
+<script>
+  // ================= REGISTRO DO PWA (SERVICE WORKER) =================
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then((reg) => console.log('? PWA registrado:', reg.scope))
+        .catch((err) => console.log('? Falha ao registrar PWA:', err));
+    });
+  }
+
+  // ================= LÓGICA DE TEMAS =================
+  const themeToggleBtn = document.getElementById("themeToggle");
+  const themeIcon = document.getElementById("icon-theme");
+
+  const icons = {
+    light: `<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>`,
+    dark: `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>`,
+    system: `<rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>`
+  };
+
+  let currentTheme = localStorage.getItem("rouanet_theme") || "system";
+
+  function applyTheme(theme) {
+    const root = document.documentElement;
+    if (theme === "system") {
+      const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      root.setAttribute("data-theme", isDark ? "dark" : "light");
+      themeIcon.innerHTML = icons.system;
+      themeToggleBtn.title = "Tema: Sistema";
+    } else {
+      root.setAttribute("data-theme", theme);
+      themeIcon.innerHTML = icons[theme];
+      themeToggleBtn.title = `Tema: ${theme === "dark" ? "Escuro" : "Claro"}`;
+    }
+    localStorage.setItem("rouanet_theme", theme);
+  }
+
+  themeToggleBtn.addEventListener("click", () => {
+    if (currentTheme === "light") currentTheme = "dark";
+    else if (currentTheme === "dark") currentTheme = "system";
+    else currentTheme = "light";
+    applyTheme(currentTheme);
+  });
+
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if (currentTheme === "system") applyTheme("system");
+  });
+
+  applyTheme(currentTheme);
+
+  // ================= LÓGICA DO CHAT =================
+  const WEBHOOK_URL = "https://holyechidna-n8n.cloudfy.live/webhook/chat-rouanet";
+
+  const chatMessages = document.getElementById("chatMessages");
+  const chatForm = document.getElementById("chatForm");
+  const userInput = document.getElementById("userInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const typingIndicator = document.getElementById("typingIndicator");
+
+  let sessionId = localStorage.getItem("rouanet_session_id");
+  if (!sessionId) {
+    sessionId = "sessao_" + crypto.randomUUID();
+    localStorage.setItem("rouanet_session_id", sessionId);
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function formatBotMarkdown(rawText) {
+    const lines = rawText.replace(/\r\n/g, "\n").split("\n");
+    let html = "";
+    let inList = false;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      const bulletMatch = trimmed.match(/^\*\s+(.*)$/);
+
+      if (bulletMatch) {
+        if (!inList) { html += "<ul>"; inList = true; }
+        const itemHtml = escapeHtml(bulletMatch[1]).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        html += `<li>${itemHtml}</li>`;
+      } else {
+        if (inList) { html += "</ul>"; inList = false; }
+        if (trimmed === "") continue;
+        const paraHtml = escapeHtml(trimmed).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        html += `<p>${paraHtml}</p>`;
+      }
+    }
+
+    if (inList) html += "</ul>";
+    return html;
+  }
+
+  function appendMessage(text, sender) {
+    const msgDiv = document.createElement("div");
+    msgDiv.classList.add("message", sender);
+
+    if (sender === "bot") {
+      msgDiv.innerHTML = formatBotMarkdown(text);
+    } else {
+      msgDiv.textContent = text;
+    }
+
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function resetSession() {
+    sessionId = "sessao_" + crypto.randomUUID();
+    localStorage.setItem("rouanet_session_id", sessionId);
+    chatMessages.innerHTML = '<div class="message bot"><p>Nova conversa iniciada! Como posso ajudar?</p></div>';
+  }
+
+  chatForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const message = userInput.value.trim();
+    if (!message) return;
+
+    appendMessage(message, "user");
+    userInput.value = "";
+    userInput.disabled = true;
+    sendBtn.disabled = true;
+    typingIndicator.classList.add("active");
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    try {
+      const response = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatInput: message, sessionId: sessionId })
+      });
+
+      if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+
+      const data = await response.json();
+      const replyText = data.reply || data.output || data.response || data.text || data.message || JSON.stringify(data);
+      appendMessage(replyText, "bot");
+
+    } catch (error) {
+      console.error("Erro ao comunicar com o n8n:", error);
+      appendMessage("Desculpe, ocorreu um erro ao conectar com o servidor. Verifique se o fluxo est&aacute; publicado e o CORS liberado.", "bot");
+    } finally {
+      typingIndicator.classList.remove("active");
+      userInput.disabled = false;
+      sendBtn.disabled = false;
+      userInput.focus();
+    }
+  });
+</script>
+
+</body>
+</html>
