@@ -18,7 +18,7 @@
   <!-- =============================================== -->
 
   <style>
-    /* ---------- Vari�veis de Cores (Temas) ---------- */
+    /* ---------- Variáveis de Cores (Temas) ---------- */
     :root {
       --primary: #1e40af;
       --primary-hover: #1d4ed8;
@@ -36,6 +36,7 @@
       --header-glass-hover: rgba(255, 255, 255, 0.25);
       --scroll-thumb: #cbd5e1;
       --scroll-thumb-hover: #94a3b8;
+      --code-bg: rgba(30, 64, 175, 0.08);
     }
 
     [data-theme="dark"] {
@@ -55,6 +56,7 @@
       --header-glass-hover: rgba(0, 0, 0, 0.3);
       --scroll-thumb: #475569;
       --scroll-thumb-hover: #64748b;
+      --code-bg: rgba(15, 23, 42, 0.65);
     }
 
     * {
@@ -70,7 +72,7 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
-      height: 100dvh; /* Melhor comportamento em mobile */
+      height: 100dvh;
       padding: 16px;
       transition: background 0.3s ease;
     }
@@ -100,7 +102,7 @@
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      padding-top: max(20px, env(safe-area-inset-top)); /* iOS notch */
+      padding-top: max(20px, env(safe-area-inset-top));
       transition: background 0.3s ease;
     }
 
@@ -221,6 +223,7 @@
       font-size: 0.95rem;
       line-height: 1.6;
       word-wrap: break-word;
+      overflow-wrap: anywhere;
       animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
@@ -250,11 +253,23 @@
 
     .message.bot p { margin-bottom: 12px; }
     .message.bot p:last-child { margin-bottom: 0; }
-    .message.bot ul { margin: 8px 0 12px 20px; }
+    .message.bot ul, .message.bot ol { margin: 8px 0 12px 22px; }
     .message.bot li { margin-bottom: 6px; }
     .message.bot strong {
       color: var(--primary-light);
       font-weight: 600;
+    }
+    .message.bot code {
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.86em;
+    }
+    .message.bot a {
+      color: var(--primary-light);
+      text-decoration: underline;
+      text-underline-offset: 2px;
     }
 
     /* ---------- Typing ---------- */
@@ -293,7 +308,7 @@
     /* ---------- Input ---------- */
     .chat-input-area {
       padding: 16px 20px;
-      padding-bottom: max(16px, env(safe-area-inset-bottom)); /* iOS notch */
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
       border-top: 1px solid var(--border);
       display: flex;
       gap: 12px;
@@ -307,7 +322,7 @@
       padding: 14px 20px;
       border: 1px solid var(--input-border);
       border-radius: 14px;
-      font-size: 16px; /* Evita zoom autom�tico no iOS */
+      font-size: 16px;
       outline: none;
       transition: all 0.2s;
       background: var(--input-bg);
@@ -400,7 +415,7 @@
       </div>
       <div>
         <h1>Assistente IA - Lei Rouanet</h1>
-        <span><span class="status-dot"></span>Tire suas d&uacute;vidas sobre incentivos culturais</span>
+        <span><span class="status-dot"></span>Tire suas dúvidas sobre incentivos culturais</span>
       </div>
     </div>
 
@@ -413,7 +428,7 @@
   </div>
 
   <div class="chat-messages" id="chatMessages">
-    <div class="message bot"><p>Ol&aacute;! Sou o assistente especialista na <strong>Lei Rouanet</strong>. Como posso ajudar com o seu projeto cultural hoje?</p></div>
+    <div class="message bot"><p>Olá! Sou o assistente especialista na <strong>Lei Rouanet</strong>. Como posso ajudar com o seu projeto cultural hoje?</p></div>
   </div>
 
   <div class="typing" id="typingIndicator">
@@ -436,12 +451,12 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js')
-        .then((reg) => console.log('? PWA registrado:', reg.scope))
-        .catch((err) => console.log('? Falha ao registrar PWA:', err));
+        .then((reg) => console.log('PWA registrado:', reg.scope))
+        .catch((err) => console.log('Falha ao registrar PWA:', err));
     });
   }
 
-  // ================= L�GICA DE TEMAS =================
+  // ================= LÓGICA DE TEMAS =================
   const themeToggleBtn = document.getElementById("themeToggle");
   const themeIcon = document.getElementById("icon-theme");
 
@@ -481,8 +496,9 @@
 
   applyTheme(currentTheme);
 
-  // ================= L�GICA DO CHAT =================
+  // ================= LÓGICA DO CHAT =================
   const WEBHOOK_URL = "https://holyechidna-n8n.cloudfy.live/webhook/chat-rouanet";
+  const REQUEST_TIMEOUT_MS = 45000;
 
   const chatMessages = document.getElementById("chatMessages");
   const chatForm = document.getElementById("chatForm");
@@ -497,7 +513,7 @@
   }
 
   function escapeHtml(str) {
-    return str
+    return String(str)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -505,29 +521,95 @@
       .replace(/'/g, "&#039;");
   }
 
-  function formatBotMarkdown(rawText) {
-    const lines = rawText.replace(/\r\n/g, "\n").split("\n");
-    let html = "";
-    let inList = false;
+  function extractResponseText(rawText) {
+    const trimmed = String(rawText ?? "").trim();
+    if (!trimmed) return "";
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      const bulletMatch = trimmed.match(/^\*\s+(.*)$/);
-
-      if (bulletMatch) {
-        if (!inList) { html += "<ul>"; inList = true; }
-        const itemHtml = escapeHtml(bulletMatch[1]).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-        html += `<li>${itemHtml}</li>`;
-      } else {
-        if (inList) { html += "</ul>"; inList = false; }
-        if (trimmed === "") continue;
-        const paraHtml = escapeHtml(trimmed).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-        html += `<p>${paraHtml}</p>`;
+    // Caso o webhook retorne JSON por engano ou configuração anterior
+    if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (typeof parsed === "string") return parsed.trim();
+        if (parsed && typeof parsed === "object") {
+          const candidate = parsed.resposta_final ?? parsed.reply ?? parsed.output ?? parsed.response ?? parsed.text ?? parsed.message;
+          if (candidate !== undefined) return String(candidate).trim();
+        }
+      } catch {
+        // Mantém como texto puro se não for JSON válido
       }
     }
 
-    if (inList) html += "</ul>";
-    return html;
+    return trimmed;
+  }
+
+  function formatInlineMarkdown(escapedText) {
+    // Links [texto](https://...)
+    let formatted = escapedText.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/gi, (_, label, url) => {
+      const safeUrl = url.replace(/"/g, "&quot;");
+      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    });
+
+    // URLs soltas seguras (https://...) que ainda não estão dentro de <a>
+    formatted = formatted.replace(/(?<!href=")(https?:\/\/[^\s<]+[^\s<.,!?;:])/gi, (url) => {
+      const safeUrl = url.replace(/"/g, "&quot;");
+      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+    });
+
+    // Código inline `codigo`
+    formatted = formatted.replace(/`([^`\n]+)`/g, "<code>$1</code>");
+
+    // Negrito **texto** e itálico *texto*
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    formatted = formatted.replace(/(^|[\s(])\*(?!\s)([^*\n]+?)\*(?=[\s).,!?;:]|$)/g, "$1<em>$2</em>");
+
+    return formatted;
+  }
+
+  function formatBotMarkdown(rawText) {
+    const cleanText = extractResponseText(rawText);
+    if (!cleanText) {
+      return "<p>Não foi possível obter uma resposta no momento.</p>";
+    }
+
+    const lines = cleanText.replace(/\r\n/g, "\n").split("\n");
+    let html = "";
+    let listType = null; // "ul" ou "ol"
+
+    const closeList = () => {
+      if (listType) {
+        html += `</${listType}>`;
+        listType = null;
+      }
+    };
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      const bulletMatch = trimmed.match(/^[-*]\s+(.*)$/);
+      const orderedMatch = trimmed.match(/^\d+\.\s+(.*)$/);
+
+      if (bulletMatch) {
+        if (listType !== "ul") {
+          closeList();
+          html += "<ul>";
+          listType = "ul";
+        }
+        html += `<li>${formatInlineMarkdown(escapeHtml(bulletMatch[1]))}</li>`;
+      } else if (orderedMatch) {
+        if (listType !== "ol") {
+          closeList();
+          html += "<ol>";
+          listType = "ol";
+        }
+        html += `<li>${formatInlineMarkdown(escapeHtml(orderedMatch[1]))}</li>`;
+      } else {
+        closeList();
+        if (!trimmed) continue;
+        html += `<p>${formatInlineMarkdown(escapeHtml(trimmed))}</p>`;
+      }
+    }
+
+    closeList();
+    return html || `<p>${escapeHtml(cleanText)}</p>`;
   }
 
   function appendMessage(text, sender) {
@@ -562,23 +644,34 @@
     typingIndicator.classList.add("active");
     chatMessages.scrollTop = chatMessages.scrollHeight;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     try {
       const response = await fetch(WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatInput: message, sessionId: sessionId })
+        body: JSON.stringify({
+          pergunta: message,
+          chatInput: message,
+          sessionId: sessionId
+        }),
+        signal: controller.signal
       });
 
       if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
 
-      const data = await response.json();
-      const replyText = data.reply || data.output || data.response || data.text || data.message || JSON.stringify(data);
-      appendMessage(replyText, "bot");
+      const rawResponseText = await response.text();
+      appendMessage(rawResponseText, "bot");
 
     } catch (error) {
       console.error("Erro ao comunicar com o n8n:", error);
-      appendMessage("Desculpe, ocorreu um erro ao conectar com o servidor. Verifique se o fluxo est&aacute; publicado e o CORS liberado.", "bot");
+      const fallbackMsg = error.name === "AbortError"
+        ? "A consulta demorou mais que o esperado. Tente novamente em instantes."
+        : "Desculpe, ocorreu um erro ao conectar com o servidor. Verifique se o fluxo está publicado e o CORS liberado.";
+      appendMessage(fallbackMsg, "bot");
     } finally {
+      clearTimeout(timeoutId);
       typingIndicator.classList.remove("active");
       userInput.disabled = false;
       sendBtn.disabled = false;

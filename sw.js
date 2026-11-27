@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rouanet-v1';
+const CACHE_NAME = 'rouanet-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -15,29 +15,26 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Ativa e limpa caches antigos
+// Ativa e remove versões antigas do cache (ex.: rouanet-v1)
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
       );
     })
   );
   self.clients.claim();
 });
 
-// Intercepta as requisições (estratégia: Network First para o chat)
+// Intercepta as requisições (mantém requisições de webhook fora do cache)
 self.addEventListener('fetch', (event) => {
-  // Ignora requisições do webhook para sempre buscar dados novos
   if (event.request.url.includes('webhook')) {
     return;
   }
-  
+
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
